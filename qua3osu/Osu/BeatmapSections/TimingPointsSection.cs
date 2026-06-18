@@ -45,12 +45,14 @@ namespace qua3osu.Osu.BeatmapSections
             var timingPointIndex = 0;
             var sliderVelocityIndex = 0;
 
+            // Track the source map state separately from the BPM currently written to osu!.
             var currentBpm = timingPoints[0].Bpm;
             var currentOutputBpm = (double) currentBpm;
             var currentSliderVelocity = 1f;
             var hasSliderVelocity = false;
             var hasOutputTimingPoint = false;
 
+            // Merge BPM and SV changes into a single chronological event stream.
             while (timingPointIndex < timingPoints.Count || sliderVelocityIndex < sliderVelocities.Count)
             {
                 var nextTimingPointTime = timingPointIndex < timingPoints.Count
@@ -80,10 +82,12 @@ namespace qua3osu.Osu.BeatmapSections
                 if (!hasSliderVelocity)
                     continue;
 
+                // Keep BPM * SV unchanged while constraining osu!'s inherited multiplier.
                 var (targetBpm, targetSliderVelocity) = GetOutputTiming(currentBpm, currentSliderVelocity);
 
                 if (!hasOutputTimingPoint || !NearlyEqual(currentOutputBpm, targetBpm))
                 {
+                    // Restore the source BPM when possible, or apply the BPM required by an extreme SV.
                     output.Add(TimingPoint.TimingChange(time, targetBpm, true));
                     currentOutputBpm = targetBpm;
                     hasOutputTimingPoint = true;
@@ -100,6 +104,7 @@ namespace qua3osu.Osu.BeatmapSections
             if (bpm <= 0 || sliderVelocity <= 0)
                 return (bpm, MinOsuSliderVelocity);
 
+            // Compensate for clamping by moving the remaining scale into the BPM.
             if (sliderVelocity < MinOsuSliderVelocity)
                 return (bpm * sliderVelocity / MinOsuSliderVelocity, MinOsuSliderVelocity);
 
