@@ -27,6 +27,7 @@ namespace qua3osu.Osu
             Uninherited = 1;
             // osu! can't handle 0 BPM, so it's replaced with a very low BPM value instead (0.000006 BPM).
             BeatLength = timingPoint.Bpm <= 0 ? 10e10 : timingPoint.MillisecondsPerBeat;
+            Meter = (int)timingPoint.Signature;
         }
 
         public TimingPoint(SliderVelocityInfo scrollVelocity)
@@ -34,9 +35,9 @@ namespace qua3osu.Osu
             SetSliderVelocity(scrollVelocity.StartTime, scrollVelocity.Multiplier);
         }
 
-        public static TimingPoint TimingChange(float time, double bpm, bool omitFirstBarline)
+        public static TimingPoint TimingChange(float time, double bpm, int meter, bool omitFirstBarline)
         {
-            var timingPoint = new TimingPoint { Time = time, Uninherited = 1 };
+            var timingPoint = new TimingPoint { Time = time, Uninherited = 1, Meter = meter };
             // osu! can't handle 0 BPM, so it's replaced with a very low BPM value instead (0.000006 BPM).
             timingPoint.BeatLength = bpm <= 0 ? 10e10 : 60000 / bpm;
             if (omitFirstBarline)

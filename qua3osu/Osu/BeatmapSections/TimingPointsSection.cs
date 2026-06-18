@@ -87,8 +87,10 @@ namespace qua3osu.Osu.BeatmapSections
 
                 if (!hasOutputTimingPoint || !NearlyEqual(currentOutputBpm, targetBpm))
                 {
+                    // Large enough so no lines are spawned after.
+                    const int largeMeter = int.MaxValue;
                     // Restore the source BPM when possible, or apply the BPM required by an extreme SV.
-                    output.Add(TimingPoint.TimingChange(time, targetBpm, true));
+                    output.Add(TimingPoint.TimingChange(time, targetBpm, largeMeter, true));
                     currentOutputBpm = targetBpm;
                     hasOutputTimingPoint = true;
                 }
