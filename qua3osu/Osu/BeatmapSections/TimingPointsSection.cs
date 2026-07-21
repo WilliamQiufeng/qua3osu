@@ -179,10 +179,25 @@ namespace qua3osu.Osu.BeatmapSections
         private static double? GetNextMeasureStart(
             double time, double timingPointStart, double bpm, int meter, double endTime)
         {
+            if (bpm <= 0 || meter <= 0)
+                return null;
+
             var measureLength = 60000 / bpm * meter;
             var measuresFromStart = (time - timingPointStart) / measureLength;
-            var nextMeasureStart = timingPointStart + (Math.Floor(measuresFromStart) + 1) * measureLength;
-            return nextMeasureStart <= endTime ? Math.Round(nextMeasureStart) : null;
+            var nextMeasureIndex = Math.Floor(measuresFromStart) + 1;
+
+            while (true)
+            {
+                var nextMeasureStart = timingPointStart + nextMeasureIndex * measureLength;
+                if (nextMeasureStart > endTime)
+                    return null;
+
+                var roundedMeasureStart = Math.Round(nextMeasureStart);
+                if (roundedMeasureStart > time)
+                    return roundedMeasureStart;
+
+                nextMeasureIndex++;
+            }
         }
 
         private static bool NearlyEqual(double x, double y) => Math.Abs(x - y) < FloatTolerance;
