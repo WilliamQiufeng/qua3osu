@@ -154,7 +154,7 @@ namespace qua3osu.Osu.BeatmapSections
         private static (double Bpm, double SliderVelocity) GetOutputTiming(float bpm, float sliderVelocity)
         {
             if (bpm <= 0 || sliderVelocity <= 0)
-                return (bpm, MinOsuSliderVelocity);
+                return (1e-6, MinOsuSliderVelocity);
 
             // Compensate for clamping by moving the remaining scale into the BPM.
             if (sliderVelocity < MinOsuSliderVelocity)
