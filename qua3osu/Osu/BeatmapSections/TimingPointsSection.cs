@@ -11,8 +11,14 @@ namespace qua3osu.Osu.BeatmapSections
 
         public List<TimingPoint> TimingPoints;
 
-        public TimingPointsSection(Qua qua)
+        public TimingPointsSection(Qua qua, bool noSv = false)
         {
+            if (noSv)
+            {
+                TimingPoints = qua.TimingPoints.OrderBy(x => x.StartTime).Select(x => new TimingPoint(x)).ToList();
+                return;
+            }
+
             if (qua.BPMDoesNotAffectScrollVelocity)
             {
                 qua.SortTimingPoints();
@@ -21,6 +27,37 @@ namespace qua3osu.Osu.BeatmapSections
             }
 
             TimingPoints = BuildTimingPoints(qua);
+        }
+
+        public void AddKiai(IEnumerable<int> times)
+        {
+            var markers = times.OrderBy(x => x).ToList();
+            if (markers.Count == 0)
+                return;
+
+            foreach (var time in markers.Distinct())
+            {
+                if (TimingPoints.Any(x => x.Time == time))
+                    continue;
+
+                var beatLength = TimingPoints.LastOrDefault(x => x.Time < time && x.Uninherited == 0)?.BeatLength ?? -100;
+                TimingPoints.Add(TimingPoint.Effect(time, beatLength));
+            }
+
+            TimingPoints = TimingPoints.OrderBy(x => x.Time).ToList();
+            var markerIndex = 0;
+            var active = false;
+            foreach (var point in TimingPoints)
+            {
+                while (markerIndex < markers.Count && markers[markerIndex] <= point.Time)
+                {
+                    active = !active;
+                    markerIndex++;
+                }
+
+                if (active)
+                    point.BitFlag |= TimingPoint.Kiai;
+            }
         }
 
         protected override string SectionTitle => "TimingPoints";

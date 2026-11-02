@@ -1,4 +1,5 @@
 ﻿using System.CommandLine;
+using System.Globalization;
 using System.IO.Compression;
 using qua3osu.Osu;
 using Quaver.API.Maps;
@@ -94,11 +95,7 @@ public class ConvertAction
                         var qua = Qua.Parse(file);
                         Print("Parsed qua", 3);
 
-                        var map = Qua2Osu(qua);
-                        Print("Converted qua to osu! map object", 3);
-
-                        File.WriteAllText(osuPath, map.ToString());
-                        Print($"Written to osuPath {osuPath}", 3);
+                        WriteMaps(qua, osuPath);
                         break;
                     case ".png":
                     case ".jpg":
@@ -148,19 +145,38 @@ public class ConvertAction
         var qua = Qua.Parse(filePath);
         Print("Parsed qua", 3);
 
-        var map = Qua2Osu(qua);
-        Print("Converted qua to osu! map object", 3);
-
-        File.WriteAllText(osuPath, map.ToString());
-        Print($"Written to path {osuPath}", 3);
+        WriteMaps(qua, osuPath);
     }
 
-    OsuBeatmap Qua2Osu(Qua qua)
+    void WriteMaps(Qua qua, string osuPath)
+    {
+        var names = qua.Bookmarks.Select(b => b.Note)
+            .Where(note => note == "$osu +nsv" || note?.StartsWith("$osu +nsv ", StringComparison.Ordinal) == true)
+            .Select(note => note == "$osu +nsv" ? "" : note!["$osu +nsv ".Length..]).ToList();
+        if (names.Any(name => name.Length == 0))
+            throw new FormatException("$osu +nsv requires a difficulty name");
+
+        var map = Qua2Osu(qua);
+        File.WriteAllText(osuPath, map.ToString());
+        Print($"Written to path {osuPath}", 3);
+
+        for (var i = 0; i < names.Count; i++)
+        {
+            var noSv = Qua2Osu(qua, true);
+            noSv.MetadataSection.Version = names[i];
+            var path = Path.Join(Path.GetDirectoryName(osuPath),
+                Path.GetFileNameWithoutExtension(osuPath) + $" (nsv{(i == 0 ? "" : $" {i + 1}")}).osu");
+            File.WriteAllText(path, noSv.ToString());
+            Print($"Written to path {path}", 3);
+        }
+    }
+
+    OsuBeatmap Qua2Osu(Qua qua, bool noSv = false)
     {
         var offset = Offset;
 
         // apply modifications based on command arguments
-        var map = new OsuBeatmap(qua)
+        var map = new OsuBeatmap(qua, noSv)
         {
             GeneralSection =
             {
@@ -179,8 +195,44 @@ public class ConvertAction
         };
         map.MetadataSection.Creator = Creator ?? map.MetadataSection.Creator;
 
+        var kiaiTimes = new List<int>();
+        foreach (var bookmark in qua.Bookmarks)
+        {
+            if (bookmark.Note?.StartsWith("$osu ", StringComparison.Ordinal) != true)
+                continue;
+
+            var directive = bookmark.Note["$osu ".Length..];
+            var separator = directive.IndexOf(' ');
+            var command = separator < 0 ? directive : directive[..separator];
+            var value = separator < 0 ? "" : directive[(separator + 1)..];
+            switch (command)
+            {
+                case "hp":
+                case "od":
+                    if (!double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number) ||
+                        !double.IsFinite(number) || number is < 0 or > 10)
+                        throw new FormatException($"Invalid $osu {command} at {bookmark.StartTime}: {value}");
+                    if (command == "hp") map.DifficultySection.HpDrainRate = number;
+                    else map.DifficultySection.OverallDifficulty = number;
+                    break;
+                case "kiai":
+                    kiaiTimes.Add(bookmark.StartTime);
+                    break;
+                case "original_name":
+                    map.MetadataSection.TitleUnicode = value;
+                    break;
+                case "original_artist":
+                    map.MetadataSection.ArtistUnicode = value;
+                    break;
+            }
+        }
+
+        map.TimingPointsSection.AddKiai(kiaiTimes);
+
         map.GeneralSection.PreviewTime += offset;
-        map.EditorSection.Bookmarks = map.EditorSection.Bookmarks.Select(t => t + offset).ToList();
+        map.EditorSection.Bookmarks = qua.Bookmarks
+            .Where(b => b.Note?.StartsWith("$osu ", StringComparison.Ordinal) != true)
+            .Select(b => b.StartTime + offset).ToList();
         map.HitObjectsSection.HitObjects.ForEach(h =>
         {
             h.Time += offset;

@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Globalization;
+using System.Text;
 using Quaver.API.Maps;
 
 namespace qua3osu.Osu.BeatmapSections
@@ -19,9 +20,9 @@ namespace qua3osu.Osu.BeatmapSections
             // Difficulty doesn't have a space after the colon
             var lines = new StringBuilder();
             lines.AppendLine(FormatTitle());
-            lines.AppendLine("HPDrainRate:" + HpDrainRate);
+            lines.AppendLine("HPDrainRate:" + HpDrainRate.ToString(CultureInfo.InvariantCulture));
             lines.AppendLine("CircleSize:" + CircleSize);
-            lines.AppendLine("OverallDifficulty:" + OverallDifficulty);
+            lines.AppendLine("OverallDifficulty:" + OverallDifficulty.ToString(CultureInfo.InvariantCulture));
             lines.AppendLine("ApproachRate:" + ApproachRate);
             lines.AppendLine("SliderMultiplier:" + SliderMultiplier);
             lines.AppendLine("SliderTickRate:" + SliderTickRate);

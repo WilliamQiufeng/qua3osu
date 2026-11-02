@@ -54,6 +54,9 @@ namespace qua3osu.Osu
             return timingPoint;
         }
 
+        public static TimingPoint Effect(float time, double beatLength) =>
+            new() { Time = time, BeatLength = beatLength };
+
         private void SetSliderVelocity(float time, double multiplier)
         {
             Time = time;
