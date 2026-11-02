@@ -174,9 +174,21 @@ public class ConvertAction
     OsuBeatmap Qua2Osu(Qua qua, bool noSv = false)
     {
         var offset = Offset;
+        var svScale = 1d;
+        foreach (var bookmark in qua.Bookmarks)
+        {
+            const string prefix = "$osu sv_scale";
+            if (bookmark.Note != prefix && bookmark.Note?.StartsWith(prefix + " ", StringComparison.Ordinal) != true)
+                continue;
+
+            var value = bookmark.Note.Length == prefix.Length ? "" : bookmark.Note[(prefix.Length + 1)..];
+            if (!double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out svScale) ||
+                !double.IsFinite(svScale) || svScale <= 0)
+                throw new FormatException($"Invalid $osu sv_scale at {bookmark.StartTime}: {value}");
+        }
 
         // apply modifications based on command arguments
-        var map = new OsuBeatmap(qua, noSv)
+        var map = new OsuBeatmap(qua, noSv, svScale)
         {
             GeneralSection =
             {

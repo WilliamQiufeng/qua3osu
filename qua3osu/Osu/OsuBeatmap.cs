@@ -4,14 +4,14 @@ using Quaver.API.Maps;
 
 namespace qua3osu.Osu
 {
-    public class OsuBeatmap(Qua qua, bool noSv = false)
+    public class OsuBeatmap(Qua qua, bool noSv = false, double svScale = 1)
     {
         public readonly GeneralSection GeneralSection = new(qua);
         public readonly EditorSection EditorSection = new EditorSection(qua);
         public readonly MetadataSection MetadataSection = new MetadataSection(qua);
         public readonly DifficultySection DifficultySection = new DifficultySection(qua);
         public readonly EventsSection EventsSection = new EventsSection(qua);
-        public readonly TimingPointsSection TimingPointsSection = new TimingPointsSection(qua, noSv);
+        public readonly TimingPointsSection TimingPointsSection = new TimingPointsSection(qua, noSv, svScale);
         public readonly HitObjectsSection HitObjectsSection = new HitObjectsSection(qua);
 
         public string SongString => $"{MetadataSection.Artist} - {MetadataSection.Title} [{MetadataSection.Version}]";

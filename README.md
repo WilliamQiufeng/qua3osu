@@ -48,6 +48,7 @@ Add these as Quaver bookmark notes in each difficulty. They apply only to that d
 
 - `$osu +nsv <name>` creates another osu! difficulty with the given name and no SV.
 - `$osu hp <number>` and `$osu od <number>` set HP and OD (decimals are accepted).
+- `$osu sv_scale <factor>` multiplies every SV, including the initial scroll speed, by a positive factor.
 - `$osu kiai` toggles kiai at that bookmark's time; use another to end it.
 - `$osu original_name <name>` and `$osu original_artist <name>` set the osu! Unicode title and artist.
 

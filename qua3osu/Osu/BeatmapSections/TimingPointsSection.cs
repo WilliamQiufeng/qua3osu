@@ -11,7 +11,7 @@ namespace qua3osu.Osu.BeatmapSections
 
         public List<TimingPoint> TimingPoints;
 
-        public TimingPointsSection(Qua qua, bool noSv = false)
+        public TimingPointsSection(Qua qua, bool noSv = false, double svScale = 1)
         {
             if (noSv)
             {
@@ -26,7 +26,7 @@ namespace qua3osu.Osu.BeatmapSections
                 qua.DenormalizeSVs();
             }
 
-            TimingPoints = BuildTimingPoints(qua);
+            TimingPoints = BuildTimingPoints(qua, svScale);
         }
 
         public void AddKiai(IEnumerable<int> times)
@@ -70,14 +70,20 @@ namespace qua3osu.Osu.BeatmapSections
             return lines.ToString();
         }
 
-        private static List<TimingPoint> BuildTimingPoints(Qua qua)
+        private static List<TimingPoint> BuildTimingPoints(Qua qua, double svScale)
         {
             const int largeMeter = 1000;
             var timingPoints = qua.TimingPoints.OrderBy(x => x.StartTime).ToList();
             var sliderVelocities = qua.SliderVelocities.OrderBy(x => x.StartTime).ToList();
 
             if (timingPoints.Count == 0)
-                return sliderVelocities.Select(sv => new TimingPoint(sv)).ToList();
+                return sliderVelocities.Select(sv =>
+                {
+                    var scaledVelocity = sv.Multiplier * svScale;
+                    if (!double.IsFinite(scaledVelocity))
+                        throw new FormatException("$osu sv_scale is too large for this map's SVs");
+                    return TimingPoint.SliderVelocity(sv.StartTime, scaledVelocity);
+                }).ToList();
 
             var barlineResyncEndTime = qua.HitObjects.Count > 0
                 ? qua.HitObjects.Max(x => Math.Max(x.StartTime, x.EndTime))
@@ -93,7 +99,7 @@ namespace qua3osu.Osu.BeatmapSections
             var currentTimingPointStart = timingPoints[0].StartTime;
             var currentMeter = (int) timingPoints[0].Signature;
             var currentSliderVelocity = 1f;
-            var hasSliderVelocity = false;
+            var hasSliderVelocity = svScale != 1;
             var hasOutputTimingPoint = false;
             double? nextBarlineResyncTime = null;
 
@@ -141,7 +147,12 @@ namespace qua3osu.Osu.BeatmapSections
                     continue;
 
                 // Keep BPM * SV unchanged while constraining osu!'s inherited multiplier.
-                var (targetBpm, targetSliderVelocity) = GetOutputTiming(currentBpm, currentSliderVelocity);
+                var scaledVelocity = currentSliderVelocity * svScale;
+                if (!double.IsFinite(scaledVelocity))
+                    throw new FormatException("$osu sv_scale is too large for this map's SVs");
+                var (targetBpm, targetSliderVelocity) = GetOutputTiming(currentBpm, scaledVelocity);
+                if (!double.IsFinite(targetBpm))
+                    throw new FormatException("$osu sv_scale is too large for this map's BPM");
 
                 if (!hasOutputTimingPoint || !NearlyEqual(currentOutputBpm, targetBpm))
                 {
@@ -188,7 +199,7 @@ namespace qua3osu.Osu.BeatmapSections
             return output;
         }
 
-        private static (double Bpm, double SliderVelocity) GetOutputTiming(float bpm, float sliderVelocity)
+        private static (double Bpm, double SliderVelocity) GetOutputTiming(float bpm, double sliderVelocity)
         {
             if (bpm <= 0 || sliderVelocity <= 0)
                 return (1e-6, MinOsuSliderVelocity);
